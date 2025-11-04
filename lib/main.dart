@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+import 'repositories/master_repository.dart';
 import 'screens/test_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Demander les permissions
+  await Permission.microphone.request();
+
+  // Initialiser et enregistrer le MasterRepository
+  final masterRepo = MasterRepository();
+  await masterRepo.initialize();
+  Get.put(masterRepo);
+
   runApp(const MyApp());
 }
 
