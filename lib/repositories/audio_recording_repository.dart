@@ -1,15 +1,24 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 /// Repository gérant l'enregistrement audio avec le pattern keep-alive (pause/resume)
 /// Le stream audio reste actif en permanence pour des performances maximales
+/// Intègre également le speech-to-text pour tester la reconnaissance vocale en simultané
 class AudioRecordingRepository {
   AudioRecorder? _audioRecorder;
   Stream<Uint8List>? _audioStream;
   StreamSubscription<Uint8List>? _streamSubscription;
+
+  // Speech-to-text (keep-alive mode aussi)
+  final SpeechToText _speechToText = SpeechToText();
+  bool _speechInitialized = false;
+  bool _isTranscribing = false; // Flag pour logger ou non les résultats
+  String _lastRecognizedWords = '';
 
   // Keep-alive state
   bool _isRecorderActive = false;
@@ -26,6 +35,7 @@ class AudioRecordingRepository {
 
   /// Initialise le recorder et démarre le stream en mode keep-alive
   /// Le stream reste actif mais en pause pour des performances optimales
+  /// Initialise également le speech-to-text
   Future<void> initialize() async {
     if (_isRecorderActive) {
       print('⚠️ AudioRecordingRepository already initialized');
@@ -37,6 +47,45 @@ class AudioRecordingRepository {
     // Vérifier les permissions
     if (!await _audioRecorder!.hasPermission()) {
       throw Exception('No recording permission');
+    }
+
+    // Initialiser le speech-to-text ET le démarrer en mode KEEP-ALIVE continu
+    try {
+      _speechInitialized = await _speechToText.initialize(
+        onError: (error) => print('❌ STT Error: $error'),
+        onStatus: (status) => print('🎙️ STT Status: $status'),
+      );
+
+      if (_speechInitialized) {
+        print('✓ Speech-to-text initialized');
+
+        // Démarrer l'écoute en continu (KEEP-ALIVE comme le recorder)
+        await _speechToText.listen(
+          onResult: (result) {
+            // Logger seulement si on est en train de transcrire
+            if (_isTranscribing) {
+              _lastRecognizedWords = result.recognizedWords;
+              print(
+                  '🗣️ STT: "${result.recognizedWords}" (final: ${result.finalResult})');
+            }
+            // Sinon on ignore silencieusement (le STT continue d'écouter)
+          },
+          listenFor:
+              const Duration(hours: 1), // Très longue durée = mode continu
+          pauseFor: const Duration(seconds: 30), // Pause si silence prolongé
+          partialResults: true,
+          cancelOnError: false, // Ne pas arrêter sur erreur
+        );
+
+        print('✓ Speech-to-text listening started - KEEP-ALIVE MODE');
+        print(
+            '  🎙️ Listening continuously (results logged only during capture)');
+      } else {
+        print('⚠️ Speech-to-text initialization failed');
+      }
+    } catch (e) {
+      print('⚠️ Speech-to-text error: $e');
+      _speechInitialized = false;
     }
 
     // Démarrer le stream IMMÉDIATEMENT
@@ -75,6 +124,7 @@ class AudioRecordingRepository {
   }
 
   /// Démarre une capture d'enregistrement (resume le stream et active la capture)
+  /// Active également le logging de la transcription STT (qui écoute déjà en continu)
   Future<int> startCapture() async {
     if (!_isRecorderActive) {
       throw Exception('Recorder not initialized');
@@ -82,24 +132,32 @@ class AudioRecordingRepository {
 
     // Clear les chunks précédents
     _currentRecordingChunks.clear();
+    _lastRecognizedWords = '';
 
     final sw = Stopwatch()..start();
 
     // Resume le recorder (déjà initialisé, donc instantané)
     await _audioRecorder?.resume();
 
-    // Activer la capture - INSTANTANÉ, pas de latence !
+    // Activer la capture audio - INSTANTANÉ, pas de latence !
     _isCapturing = true;
+
+    // Activer le logging de transcription (le STT écoute déjà en continu)
+    _isTranscribing = true;
 
     sw.stop();
     final resumeTime = sw.elapsedMilliseconds;
 
     print('📍 Started capturing at ${DateTime.now()} (⚡ ${resumeTime}ms)');
+    print('   🎤 Audio recording: ✓');
+    print(
+        '   🗣️ Speech-to-text: ${_speechInitialized ? "✓ (already listening)" : "✗"}');
 
     return resumeTime;
   }
 
   /// Arrête la capture en cours et sauvegarde l'enregistrement
+  /// Désactive le logging de transcription (mais le STT continue d'écouter en continu)
   /// Retourne le chemin du fichier sauvegardé
   Future<String?> stopCapture() async {
     if (!_isRecorderActive || !_isCapturing) {
@@ -107,11 +165,20 @@ class AudioRecordingRepository {
       return null;
     }
 
+    // Désactiver le logging de transcription (le STT continue d'écouter)
+    _isTranscribing = false;
+
+    // Logger la transcription finale si elle existe
+    if (_lastRecognizedWords.isNotEmpty) {
+      print('📝 Final transcription: "$_lastRecognizedWords"');
+    }
+
     // Arrêter la capture
     _isCapturing = false;
 
     print('📍 Stopped capturing at ${DateTime.now()}');
     print('📦 Captured ${_currentRecordingChunks.length} chunks');
+    print('   🗣️ STT still listening in background (keep-alive)');
 
     // Pause le recorder (keep-alive, mais pas de capture)
     await _audioRecorder?.pause();
@@ -227,6 +294,11 @@ class AudioRecordingRepository {
   Future<void> dispose() async {
     // Arrêter la capture
     _isCapturing = false;
+
+    // Arrêter le speech-to-text si actif
+    if (_speechInitialized && _speechToText.isListening) {
+      await _speechToText.stop();
+    }
 
     // Annuler la subscription au stream
     await _streamSubscription?.cancel();

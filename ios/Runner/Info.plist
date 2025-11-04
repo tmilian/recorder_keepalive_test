@@ -49,6 +49,8 @@
 	<!-- Permissions -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs microphone access to test audio recording with keep-alive mode.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app needs speech recognition to test simultaneous recording and speech-to-text.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access for video playback testing.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

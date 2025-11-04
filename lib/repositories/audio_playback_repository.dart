@@ -19,9 +19,10 @@ class AudioPlaybackRepository {
     print('✓ AudioPlaybackRepository initialized');
   }
 
-  Future<Duration> playUrl(
+  Future<void> playUrl(
     String url, {
-    Duration duration = const Duration(seconds: 5),
+    Duration maxDuration = const Duration(seconds: 5),
+    Function(Duration)? onStart,
   }) async {
     if (!_isInitialized || _audioPlayer == null) {
       throw Exception('AudioPlaybackRepository not initialized');
@@ -34,7 +35,8 @@ class AudioPlaybackRepository {
       final sub = _audioPlayer?.playerStateStream.listen((state) async {
         if (state.playing) {
           sw.stop();
-          await Future.delayed(duration);
+          onStart?.call(sw.elapsed);
+          await Future.delayed(maxDuration);
           await _audioPlayer?.stop();
         }
       });
@@ -42,7 +44,6 @@ class AudioPlaybackRepository {
       await _audioPlayer!.play();
 
       sub?.cancel();
-      return sw.elapsed;
     } catch (e) {
       print('❌ Error playing URL: $e');
       rethrow;

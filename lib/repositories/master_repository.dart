@@ -66,9 +66,17 @@ class MasterRepository {
   // ==================== AUDIO PLAYBACK ====================
 
   /// Joue un audio depuis une URL
-  Future<Duration> playAudioUrl(String url) async {
+  Future<void> playAudioUrl(
+    String url, {
+    Duration maxDuration = const Duration(seconds: 5),
+    Function(Duration)? onStart,
+  }) async {
     _ensureInitialized();
-    return await _audioPlaybackRepo.playUrl(url);
+    return await _audioPlaybackRepo.playUrl(
+      url,
+      maxDuration: maxDuration,
+      onStart: onStart,
+    );
   }
 
   /// Joue un fichier audio local

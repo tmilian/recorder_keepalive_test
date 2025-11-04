@@ -68,13 +68,15 @@ class LessonController extends GetxController {
     currentStep.value = 'Playing Audio ${index + 1}';
 
     try {
-      final initDuration = await _masterRepo.playAudioUrl(audioUrls[index]);
+      await _masterRepo.playAudioUrl(
+        audioUrls[index],
+        maxDuration: const Duration(seconds: 5),
+        onStart: (initDuration) {
+          lastActionTime.value = initDuration.inMilliseconds;
+          statusMessage.value = '🔊 Audio (${initDuration.inMilliseconds}ms)';
+        },
+      );
 
-      lastActionTime.value = initDuration.inMilliseconds;
-      statusMessage.value = '🔊 Audio (${initDuration.inMilliseconds}ms)';
-
-      // Jouer pendant 5 secondes puis arrêter
-      await Future.delayed(const Duration(seconds: 5));
       await _masterRepo.stopAudio();
     } catch (e) {
       statusMessage.value = '❌ Audio error: $e';
@@ -107,6 +109,7 @@ class LessonController extends GetxController {
 
   Future<void> startRecording() async {
     try {
+      print('staaaart recording');
       currentStep.value = 'Recording ${recordedFiles.length + 1}';
 
       // Démarrer l'enregistrement (le MasterRepository s'occupe de tout)
@@ -165,29 +168,15 @@ class LessonController extends GetxController {
     try {
       // Cycle 1: Video -> Audio -> Record -> Audio -> Record
       await playVideo(0);
-      await Future.delayed(const Duration(seconds: 1));
-
       await playAudio(0);
-      await Future.delayed(const Duration(seconds: 1));
-
       await startRecording();
-      await Future.delayed(const Duration(seconds: 1));
-
       await playAudio(1);
-      await Future.delayed(const Duration(seconds: 1));
-
       await startRecording();
-      await Future.delayed(const Duration(seconds: 1));
 
       // Cycle 2: Video -> Audio -> Record
       await playVideo(1);
-      await Future.delayed(const Duration(seconds: 1));
-
       await playAudio(2);
-      await Future.delayed(const Duration(seconds: 1));
-
       await startRecording();
-      await Future.delayed(const Duration(seconds: 1));
 
       statusMessage.value =
           '✅ Test completed! ${recordedFiles.length} recordings';
