@@ -8,10 +8,8 @@ import 'screens/test_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Demander les permissions
   await Permission.microphone.request();
 
-  // Initialiser et enregistrer le MasterRepository
   final masterRepo = MasterRepository();
   await masterRepo.initialize();
   Get.put(masterRepo);

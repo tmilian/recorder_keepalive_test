@@ -5,26 +5,19 @@ import 'package:video_player/video_player.dart';
 
 import '../repositories/master_repository.dart';
 
-/// Controller simplifié gérant uniquement l'UI state et l'orchestration
-/// Toute la logique métier est déléguée au MasterRepository
 class LessonController extends GetxController {
-  // Injection du MasterRepository
   late final MasterRepository _masterRepo;
 
-  // UI State variables
   final isInitialized = false.obs;
   final currentStep = ''.obs;
   final statusMessage = ''.obs;
   final recordedFiles = <String>[].obs;
 
-  // Performance metrics
   final initTime = 0.obs;
   final lastActionTime = 0.obs;
 
-  // Getter pour le VideoPlayerController (nécessaire pour l'UI)
   VideoPlayerController? get videoController => _masterRepo.videoController;
 
-  // Test data - URLs publiques pour test
   final audioUrls = [
     'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
@@ -46,10 +39,8 @@ class LessonController extends GetxController {
   }
 
   Future<void> _initialize() async {
-    // Récupérer le MasterRepository depuis GetX
     _masterRepo = Get.find<MasterRepository>();
 
-    // Le MasterRepository est déjà initialisé dans main.dart
     if (_masterRepo.isInitialized) {
       isInitialized.value = true;
       statusMessage.value = '✅ Ready | Stream KEEP-ALIVE 🔴';
@@ -59,8 +50,6 @@ class LessonController extends GetxController {
       print('❌ MasterRepository not initialized');
     }
   }
-
-  // ==================== ACTIONS ====================
 
   Future<void> playAudio(int index) async {
     if (index >= audioUrls.length) return;
@@ -91,14 +80,12 @@ class LessonController extends GetxController {
     currentStep.value = 'Playing Video ${index + 1}';
 
     try {
-      // Le MasterRepository s'occupe de pause l'audio automatiquement
       await _masterRepo.playVideo(videoUrls[index]);
 
       sw.stop();
       lastActionTime.value = sw.elapsedMilliseconds;
       statusMessage.value = '🎬 Video (${sw.elapsedMilliseconds}ms)';
 
-      // Jouer pendant 5 secondes puis pause
       await Future.delayed(const Duration(seconds: 5));
       await _masterRepo.pauseVideo();
     } catch (e) {
@@ -112,16 +99,13 @@ class LessonController extends GetxController {
       print('staaaart recording');
       currentStep.value = 'Recording ${recordedFiles.length + 1}';
 
-      // Démarrer l'enregistrement (le MasterRepository s'occupe de tout)
       final resumeTime = await _masterRepo.startRecording();
 
       statusMessage.value = '🎤 Recording (⚡ ${resumeTime}ms)';
       print('📍 Started recording at ${DateTime.now()}');
 
-      // Enregistrer pendant 3 secondes
       await Future.delayed(const Duration(seconds: 3));
 
-      // Arrêter et sauvegarder
       final filePath = await _masterRepo.stopRecording();
 
       if (filePath != null) {
@@ -146,7 +130,6 @@ class LessonController extends GetxController {
       await _masterRepo.playAudioFile(recordedFiles[index]);
       statusMessage.value = '🔊 Playing recorded file ${index + 1}';
 
-      // Laisser jouer pendant quelques secondes
       await Future.delayed(const Duration(seconds: 3));
       await _masterRepo.stopAudio();
     } catch (e) {
@@ -154,8 +137,6 @@ class LessonController extends GetxController {
       print('Playback error: $e');
     }
   }
-
-  // ==================== TEST WORKFLOW ====================
 
   Future<void> runFullTestCycle() async {
     if (!isInitialized.value) {
@@ -166,14 +147,12 @@ class LessonController extends GetxController {
     statusMessage.value = '🚀 Starting test cycle...';
 
     try {
-      // Cycle 1: Video -> Audio -> Record -> Audio -> Record
       await playVideo(0);
       await playAudio(0);
       await startRecording();
       await playAudio(1);
       await startRecording();
 
-      // Cycle 2: Video -> Audio -> Record
       await playVideo(1);
       await playAudio(2);
       await startRecording();
@@ -185,12 +164,5 @@ class LessonController extends GetxController {
       statusMessage.value = '❌ Test cycle error: $e';
       print('Test cycle error: $e');
     }
-  }
-
-  @override
-  void onClose() {
-    // Le MasterRepository sera dispose dans main.dart ou au niveau app
-    // On ne le dispose pas ici car il peut être partagé
-    super.onClose();
   }
 }

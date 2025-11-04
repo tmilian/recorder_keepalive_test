@@ -21,7 +21,6 @@ class TestScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Status Card
                 Card(
                   color: controller.isInitialized.value
                       ? Colors.green[50]
@@ -69,10 +68,7 @@ class TestScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // Current Step
                 if (controller.currentStep.value.isNotEmpty)
                   Card(
                     color: Colors.blue[50],
@@ -84,7 +80,6 @@ class TestScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-
                 const SizedBox(height: 24),
                 Center(
                   child: controller.videoController?.value.isInitialized == true
@@ -95,8 +90,6 @@ class TestScreen extends StatelessWidget {
                         )
                       : Container(),
                 ),
-
-                // Run Full Test Button
                 ElevatedButton.icon(
                   onPressed: controller.isInitialized.value
                       ? () => controller.runFullTestCycle()
@@ -109,19 +102,14 @@ class TestScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                   ),
                 ),
-
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
-
-                // Manual Controls
                 Text(
                   'Manual Controls',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-
-                // Video Controls
                 Text(
                   'Videos',
                   style: Theme.of(context).textTheme.titleMedium,
@@ -139,10 +127,7 @@ class TestScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // Audio Controls
                 Text(
                   'Audios',
                   style: Theme.of(context).textTheme.titleMedium,
@@ -160,10 +145,7 @@ class TestScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // Recording Control
                 Text(
                   'Recording',
                   style: Theme.of(context).textTheme.titleMedium,
@@ -180,18 +162,14 @@ class TestScreen extends StatelessWidget {
                     foregroundColor: Colors.white,
                   ),
                 ),
-
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
-
-                // Recorded Files
                 Text(
                   'Recorded Files (${controller.recordedFiles.length})',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
-
                 if (controller.recordedFiles.isEmpty)
                   Card(
                     child: Padding(
@@ -223,10 +201,7 @@ class TestScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-
                 const SizedBox(height: 24),
-
-                // Info Card
                 Card(
                   color: Colors.amber[50],
                   child: Padding(
