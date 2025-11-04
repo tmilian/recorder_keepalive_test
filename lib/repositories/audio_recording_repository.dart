@@ -94,7 +94,7 @@ class AudioRecordingRepository {
 
     _isRecorderActive = true;
 
-    await _audioRecorder?.pause();
+    // await _audioRecorder?.pause();
 
     print('✓ AudioRecordingRepository initialized - KEEP-ALIVE MODE');
     print('  📡 Stream active, ready for instant resume');
@@ -111,7 +111,7 @@ class AudioRecordingRepository {
 
     final sw = Stopwatch()..start();
 
-    await _audioRecorder?.resume();
+    // await _audioRecorder?.resume();
 
     _isCapturing = true;
 
@@ -146,7 +146,7 @@ class AudioRecordingRepository {
     print('📦 Captured ${_currentRecordingChunks.length} chunks');
     print('   🗣️ STT still listening in background (keep-alive)');
 
-    await _audioRecorder?.pause();
+    // await _audioRecorder?.pause();
 
     return await _saveRecordedChunks();
   }

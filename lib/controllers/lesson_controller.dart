@@ -96,7 +96,6 @@ class LessonController extends GetxController {
 
   Future<void> startRecording() async {
     try {
-      print('staaaart recording');
       currentStep.value = 'Recording ${recordedFiles.length + 1}';
 
       final resumeTime = await _masterRepo.startRecording();
