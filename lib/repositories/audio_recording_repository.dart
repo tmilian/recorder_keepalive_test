@@ -42,6 +42,7 @@ class AudioRecordingRepository {
       _speechInitialized = await _speechToText.initialize(
         onError: (error) => print('❌ STT Error: $error'),
         onStatus: (status) => print('🎙️ STT Status: $status'),
+        debugLogging: true,
       );
 
       if (_speechInitialized) {
@@ -56,9 +57,12 @@ class AudioRecordingRepository {
             }
           },
           listenFor: const Duration(hours: 1),
-          pauseFor: const Duration(seconds: 30),
-          partialResults: true,
-          cancelOnError: false,
+          listenOptions: SpeechListenOptions(
+            cancelOnError: true,
+            partialResults: true,
+            listenMode: ListenMode.dictation,
+            sampleRate: 44100,
+          ),
         );
 
         print('✓ Speech-to-text listening started - KEEP-ALIVE MODE');

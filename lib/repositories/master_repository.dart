@@ -32,13 +32,13 @@ class MasterRepository {
       _audioPlaybackRepo = AudioPlaybackRepository();
       _videoPlaybackRepo = VideoPlaybackRepository();
 
-      await _audioSessionRepo.initialize();
-
       await Future.wait([
         _audioRecordingRepo.initialize(),
         _audioPlaybackRepo.initialize(),
         _videoPlaybackRepo.initialize(),
       ]);
+
+      await _audioSessionRepo.initialize();
 
       sw.stop();
       _isInitialized = true;
