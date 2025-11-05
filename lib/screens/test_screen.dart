@@ -80,16 +80,6 @@ class TestScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                const SizedBox(height: 24),
-                Center(
-                  child: controller.videoController?.value.isInitialized == true
-                      ? AspectRatio(
-                          aspectRatio:
-                              controller.videoController!.value.aspectRatio,
-                          child: VideoPlayer(controller.videoController!),
-                        )
-                      : Container(),
-                ),
                 ElevatedButton.icon(
                   onPressed: controller.isInitialized.value
                       ? () => controller.runFullTestCycle()
@@ -104,7 +94,19 @@ class TestScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 const Divider(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
+                if (controller.playingVideo.value) ...[
+                  Center(
+                    child: AspectRatio(
+                      aspectRatio:
+                          controller.videoController!.value.aspectRatio,
+                      child: VideoPlayer(controller.videoController!),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                ],
                 Text(
                   'Manual Controls',
                   style: Theme.of(context).textTheme.titleLarge,
@@ -159,6 +161,18 @@ class TestScreen extends StatelessWidget {
                   label: const Text('START RECORDING (3s)'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: controller.isInitialized.value
+                      ? () => controller.playVideoAndRecord()
+                      : null,
+                  icon: const Icon(Icons.videocam),
+                  label: const Text('PLAY VIDEO (MUTED) + RECORD (5s)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
                     foregroundColor: Colors.white,
                   ),
                 ),

@@ -18,7 +18,7 @@ class VideoPlaybackRepository {
     print('✓ VideoPlaybackRepository initialized');
   }
 
-  Future<void> playVideo(String url) async {
+  Future<void> playVideo(String url, {bool muted = false}) async {
     if (!_isInitialized) {
       throw Exception('VideoPlaybackRepository not initialized');
     }
@@ -29,6 +29,7 @@ class VideoPlaybackRepository {
 
         _videoController = VideoPlayerController.networkUrl(
           Uri.parse(url),
+          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
         );
 
         await _videoController!.initialize();
@@ -39,10 +40,17 @@ class VideoPlaybackRepository {
         print('🔄 Reusing existing video controller for: $url');
       }
 
+      if (muted) {
+        await _videoController!.setVolume(0.0);
+        print('🔇 Video muted');
+      } else {
+        await _videoController!.setVolume(1.0);
+      }
+
       await _videoController!.seekTo(Duration.zero);
       await _videoController!.play();
 
-      print('▶️ Playing video: $url');
+      print('▶️ Playing video: $url ${muted ? "(muted)" : ""}');
     } catch (e) {
       print('❌ Error playing video: $e');
       rethrow;
@@ -86,6 +94,19 @@ class VideoPlaybackRepository {
       print('⏹️ Video stopped');
     } catch (e) {
       print('❌ Error stopping video: $e');
+    }
+  }
+
+  Future<void> setVolume(double volume) async {
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      return;
+    }
+
+    try {
+      await _videoController!.setVolume(volume);
+      print('🔊 Video volume set to: $volume');
+    } catch (e) {
+      print('❌ Error setting video volume: $e');
     }
   }
 

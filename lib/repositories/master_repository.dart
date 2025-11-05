@@ -5,6 +5,20 @@ import 'audio_recording_repository.dart';
 import 'audio_session_repository.dart';
 import 'video_playback_repository.dart';
 
+class PlayVideoAndRecordResult {
+  final String? recordedFilePath;
+  final int videoInitTime;
+  final int recordInitTime;
+  final int totalTime;
+
+  PlayVideoAndRecordResult({
+    required this.recordedFilePath,
+    required this.videoInitTime,
+    required this.recordInitTime,
+    required this.totalTime,
+  });
+}
+
 class MasterRepository {
   late final AudioSessionRepository _audioSessionRepo;
   late final AudioRecordingRepository _audioRecordingRepo;
@@ -77,12 +91,12 @@ class MasterRepository {
     await _audioPlaybackRepo.stop();
   }
 
-  Future<void> playVideo(String url) async {
+  Future<void> playVideo(String url, {bool muted = false}) async {
     _ensureInitialized();
 
     await _audioPlaybackRepo.pause();
 
-    await _videoPlaybackRepo.playVideo(url);
+    await _videoPlaybackRepo.playVideo(url, muted: muted);
   }
 
   Future<void> pauseVideo() async {
@@ -131,6 +145,46 @@ class MasterRepository {
     final filePath = await stopRecording();
 
     return filePath;
+  }
+
+  Future<PlayVideoAndRecordResult> playVideoAndRecord({
+    required String videoUrl,
+    required Duration duration,
+    required Function() onStartVideo,
+  }) async {
+    _ensureInitialized();
+
+    print(
+        '🎬🎤 Starting simultaneous video playback (muted) and audio recording');
+    final sw = Stopwatch()..start();
+
+    await _audioPlaybackRepo.pause();
+
+    await _videoPlaybackRepo.playVideo(videoUrl, muted: true);
+    onStartVideo();
+    final videoInitTime = sw.elapsedMilliseconds;
+    print('🎬 Video started (muted) in ${videoInitTime}ms');
+
+    final recordStartTime = await _audioRecordingRepo.startCapture();
+    print('🎤 Recording started in ${recordStartTime}ms');
+
+    await Future.delayed(duration);
+
+    final filePath = await _audioRecordingRepo.stopCapture();
+    await _videoPlaybackRepo.pause();
+
+    sw.stop();
+    print('✅ Test completed in ${sw.elapsedMilliseconds}ms');
+    print('   - Video init: ${videoInitTime}ms');
+    print('   - Record init: ${recordStartTime}ms');
+    print('   - Total duration: ${sw.elapsedMilliseconds}ms');
+
+    return PlayVideoAndRecordResult(
+      recordedFilePath: filePath,
+      videoInitTime: videoInitTime,
+      recordInitTime: recordStartTime,
+      totalTime: sw.elapsedMilliseconds,
+    );
   }
 
   void _ensureInitialized() {

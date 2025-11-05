@@ -9,6 +9,7 @@ class LessonController extends GetxController {
   late final MasterRepository _masterRepo;
 
   final isInitialized = false.obs;
+  final playingVideo = false.obs;
   final currentStep = ''.obs;
   final statusMessage = ''.obs;
   final recordedFiles = <String>[].obs;
@@ -82,12 +83,16 @@ class LessonController extends GetxController {
     try {
       await _masterRepo.playVideo(videoUrls[index]);
 
+      playingVideo.value = true;
+
       sw.stop();
       lastActionTime.value = sw.elapsedMilliseconds;
       statusMessage.value = '🎬 Video (${sw.elapsedMilliseconds}ms)';
 
       await Future.delayed(const Duration(seconds: 5));
       await _masterRepo.pauseVideo();
+
+      playingVideo.value = false;
     } catch (e) {
       statusMessage.value = '❌ Video error: $e';
       print('Video play error: $e');
@@ -134,6 +139,41 @@ class LessonController extends GetxController {
     } catch (e) {
       statusMessage.value = '❌ Playback error: $e';
       print('Playback error: $e');
+    }
+  }
+
+  Future<void> playVideoAndRecord({int videoIndex = 0}) async {
+    if (!isInitialized.value) {
+      statusMessage.value = '❌ Not initialized';
+      return;
+    }
+
+    if (videoIndex >= videoUrls.length) return;
+
+    currentStep.value = 'Video + Recording ${recordedFiles.length + 1}';
+
+    try {
+      final result = await _masterRepo.playVideoAndRecord(
+          videoUrl: videoUrls[videoIndex],
+          duration: const Duration(seconds: 5),
+          onStartVideo: () {
+            playingVideo.value = true;
+          });
+
+      playingVideo.value = false;
+
+      if (result.recordedFilePath != null) {
+        recordedFiles.add(result.recordedFilePath!);
+        lastActionTime.value = result.recordInitTime;
+        statusMessage.value =
+            '✅ Video+Record done! (🎬${result.videoInitTime}ms / 🎤${result.recordInitTime}ms)';
+        print('📍 Video + Record completed at ${DateTime.now()}');
+      } else {
+        statusMessage.value = '⚠️ No audio data captured during video playback';
+      }
+    } catch (e) {
+      statusMessage.value = '❌ Video+Record error: $e';
+      print('Video+Record error: $e');
     }
   }
 
