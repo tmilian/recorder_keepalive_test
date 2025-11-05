@@ -4,23 +4,19 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 
 class AudioRecordingRepository {
   AudioRecorder? _audioRecorder;
   Stream<Uint8List>? _audioStream;
-  StreamSubscription<Uint8List>? _streamSubscription;
-
-  final SpeechToText _speechToText = SpeechToText();
-  bool _speechInitialized = false;
-  bool _isTranscribing = false;
-  String _lastRecognizedWords = '';
+  final List<StreamSubscription> _streamSubscriptions = [];
 
   bool _isRecorderActive = false;
   bool get isRecorderActive => _isRecorderActive;
 
+  RecordState _recordState = RecordState.pause;
+
   bool _isCapturing = false;
-  List<Uint8List> _currentRecordingChunks = [];
+  final List<Uint8List> _currentRecordingChunks = [];
   int _recordingCounter = 0;
 
   final List<String> _recordedFiles = [];
@@ -38,43 +34,10 @@ class AudioRecordingRepository {
       throw Exception('No recording permission');
     }
 
-    try {
-      _speechInitialized = await _speechToText.initialize(
-        onError: (error) => print('❌ STT Error: $error'),
-        onStatus: (status) => print('🎙️ STT Status: $status'),
-        debugLogging: true,
-      );
-
-      if (_speechInitialized) {
-        print('✓ Speech-to-text initialized');
-
-        await _speechToText.listen(
-          onResult: (result) {
-            if (_isTranscribing) {
-              _lastRecognizedWords = result.recognizedWords;
-              print(
-                  '🗣️ STT: "${result.recognizedWords}" (final: ${result.finalResult})');
-            }
-          },
-          listenFor: const Duration(hours: 1),
-          listenOptions: SpeechListenOptions(
-            cancelOnError: true,
-            partialResults: true,
-            listenMode: ListenMode.dictation,
-            sampleRate: 44100,
-          ),
-        );
-
-        print('✓ Speech-to-text listening started - KEEP-ALIVE MODE');
-        print(
-            '  🎙️ Listening continuously (results logged only during capture)');
-      } else {
-        print('⚠️ Speech-to-text initialization failed');
-      }
-    } catch (e) {
-      print('⚠️ Speech-to-text error: $e');
-      _speechInitialized = false;
-    }
+    _streamSubscriptions.add(_audioRecorder!.onStateChanged().listen((state) {
+      print('⚡️Audio recorder state changed: $state');
+      _recordState = state;
+    }));
 
     _audioStream = await _audioRecorder!.startStream(
       const RecordConfig(
@@ -82,10 +45,11 @@ class AudioRecordingRepository {
         bitRate: 128000,
         sampleRate: 44100,
         numChannels: 1,
+        audioInterruption: AudioInterruptionMode.pauseResume,
       ),
     );
 
-    _streamSubscription = _audioStream!.listen(
+    _streamSubscriptions.add(_audioStream!.listen(
       (chunk) {
         if (_isCapturing) {
           _currentRecordingChunks.add(chunk);
@@ -94,11 +58,9 @@ class AudioRecordingRepository {
       onError: (error) {
         print('❌ Stream error: $error');
       },
-    );
+    ));
 
     _isRecorderActive = true;
-
-    // await _audioRecorder?.pause();
 
     print('✓ AudioRecordingRepository initialized - KEEP-ALIVE MODE');
     print('  📡 Stream active, ready for instant resume');
@@ -110,24 +72,20 @@ class AudioRecordingRepository {
       throw Exception('Recorder not initialized');
     }
 
-    _currentRecordingChunks.clear();
-    _lastRecognizedWords = '';
-
     final sw = Stopwatch()..start();
 
-    // await _audioRecorder?.resume();
+    if (_recordState == RecordState.pause) {
+      await _audioRecorder?.resume();
+    }
 
+    _currentRecordingChunks.clear();
     _isCapturing = true;
-
-    _isTranscribing = true;
 
     sw.stop();
     final resumeTime = sw.elapsedMilliseconds;
 
     print('📍 Started capturing at ${DateTime.now()} (⚡ ${resumeTime}ms)');
     print('   🎤 Audio recording: ✓');
-    print(
-        '   🗣️ Speech-to-text: ${_speechInitialized ? "✓ (already listening)" : "✗"}');
 
     return resumeTime;
   }
@@ -136,12 +94,6 @@ class AudioRecordingRepository {
     if (!_isRecorderActive || !_isCapturing) {
       print('⚠️ No capture in progress');
       return null;
-    }
-
-    _isTranscribing = false;
-
-    if (_lastRecognizedWords.isNotEmpty) {
-      print('📝 Final transcription: "$_lastRecognizedWords"');
     }
 
     _isCapturing = false;
@@ -251,12 +203,10 @@ class AudioRecordingRepository {
   Future<void> dispose() async {
     _isCapturing = false;
 
-    if (_speechInitialized && _speechToText.isListening) {
-      await _speechToText.stop();
+    for (final subscription in _streamSubscriptions) {
+      await subscription.cancel();
     }
-
-    await _streamSubscription?.cancel();
-    _streamSubscription = null;
+    _streamSubscriptions.clear();
 
     await _audioRecorder?.stop();
     await _audioRecorder?.dispose();

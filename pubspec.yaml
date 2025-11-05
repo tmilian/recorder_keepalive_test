@@ -15,7 +15,6 @@ dependencies:
   record: ^6.1.2
   video_player: ^2.10.0
   audio_session: ^0.1.21
-  speech_to_text: ^7.0.0
 
   # State management
   get: ^4.6.6
