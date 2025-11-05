@@ -13,7 +13,10 @@ class AudioPlaybackRepository {
       return;
     }
 
-    _audioPlayer = AudioPlayer();
+    _audioPlayer = AudioPlayer(
+      androidApplyAudioAttributes: false,
+      handleAudioSessionActivation: false,
+    );
     _isInitialized = true;
 
     print('✓ AudioPlaybackRepository initialized');
